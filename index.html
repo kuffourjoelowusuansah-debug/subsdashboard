@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SubsGH — Subscription Manager</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --bg2: #13161e;
+    --bg3: #1a1e28;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #eef0f6;
+    --muted: #7a7f94;
+    --dim: #454a5e;
+    --gold: #f0c057;
+    --gold-dim: rgba(240,192,87,0.12);
+    --green: #3ecf8e;
+    --green-dim: rgba(62,207,142,0.12);
+    --blue: #5b8dee;
+    --blue-dim: rgba(91,141,238,0.12);
+    --red: #f26c6c;
+    --red-dim: rgba(242,108,108,0.12);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167,139,250,0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ─── Layout ─── */
+  .shell { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 220px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    display: flex; flex-direction: column;
+    z-index: 10;
+  }
+
+  .logo {
+    padding: 0 20px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .logo-mark { font-size: 20px; font-weight: 600; color: var(--gold); letter-spacing: -0.5px; }
+  .logo-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .nav-item.active { color: var(--gold); border-left-color: var(--gold); background: var(--gold-dim); }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .main {
+    margin-left: 220px;
+    flex: 1;
+    padding: 32px 36px;
+    max-width: 1200px;
+  }
+
+  /* ─── Page header ─── */
+  .page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .page-title { font-size: 22px; font-weight: 600; color: var(--text); }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+  /* ─── Metric cards ─── */
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .metric {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative; overflow: hidden;
+  }
+  .metric::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .metric.gold::before { background: var(--gold); }
+  .metric.green::before { background: var(--green); }
+  .metric.blue::before { background: var(--blue); }
+  .metric.purple::before { background: var(--purple); }
+
+  .metric-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+  .metric.gold .metric-icon { background: var(--gold-dim); }
+  .metric.green .metric-icon { background: var(--green-dim); }
+  .metric.blue .metric-icon { background: var(--blue-dim); }
+  .metric.purple .metric-icon { background: var(--purple-dim); }
+
+  .metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .metric-value { font-size: 26px; font-weight: 600; font-family: 'DM Mono', monospace; }
+  .metric.gold .metric-value { color: var(--gold); }
+  .metric.green .metric-value { color: var(--green); }
+  .metric.blue .metric-value { color: var(--blue); }
+  .metric.purple .metric-value { color: var(--purple); }
+  .metric-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* ─── Split bar ─── */
+  .split-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 28px; }
+  .split-title { font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .split-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; gap: 2px; margin-bottom: 14px; }
+  .split-bar-seg { transition: width 0.5s ease; }
+  .split-legend { display: flex; gap: 24px; flex-wrap: wrap; }
+  .split-leg { display: flex; align-items: center; gap: 8px; }
+  .split-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .split-leg-label { font-size: 12px; color: var(--muted); }
+  .split-leg-val { font-size: 13px; font-weight: 600; font-family: 'DM Mono', monospace; margin-left: 4px; }
+
+  /* ─── Panels ─── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ─── Form card ─── */
+  .form-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .form-title { font-size: 15px; font-weight: 600; margin-bottom: 18px; color: var(--text); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .form-grid-wide { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 14px; align-items: end; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  input, select, textarea {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border 0.15s;
+    width: 100%;
+  }
+  input:focus, select:focus { border-color: var(--gold); }
+  select option { background: var(--bg3); }
+
+  .price-preview {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--green);
+    font-weight: 500;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--gold); color: #0d0f14; }
+  .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid rgba(242,108,108,0.2); }
+  .btn-danger:hover { background: rgba(242,108,108,0.2); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+  /* ─── Table ─── */
+  .table-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .table-title { font-size: 14px; font-weight: 600; }
+  .table-count { font-size: 12px; color: var(--muted); background: var(--bg3); padding: 3px 10px; border-radius: 20px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left;
+    padding: 11px 16px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+  }
+  tbody td {
+    padding: 13px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .badge-snap { background: rgba(255,252,0,0.1); color: #fff852; }
+  .badge-spotify { background: rgba(30,215,96,0.1); color: #1ed760; }
+  .badge-netflix { background: rgba(229,9,20,0.12); color: #e50914; }
+  .badge-chatgpt { background: rgba(16,163,127,0.1); color: #10a37f; }
+  .badge-capcut { background: rgba(255,255,255,0.08); color: #ccc; }
+
+  .mono { font-family: 'DM Mono', monospace; }
+  .text-gold { color: var(--gold); }
+  .text-green { color: var(--green); }
+  .text-blue { color: var(--blue); }
+  .text-purple { color: var(--purple); }
+  .text-muted { color: var(--muted); }
+
+  /* ─── Catalog ─── */
+  .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .service-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .service-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .service-emoji { font-size: 22px; }
+  .service-name { font-size: 14px; font-weight: 600; }
+  .service-body { padding: 0; }
+  .plan-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .plan-row:last-child { border-bottom: none; }
+  .plan-name { color: var(--text); font-weight: 500; }
+  .plan-base { color: var(--muted); font-family: 'DM Mono', monospace; }
+  .plan-sell { color: var(--green); font-family: 'DM Mono', monospace; font-weight: 600; }
+  .plan-label { font-size: 10px; color: var(--dim); text-align: center; }
+
+  /* ─── Empty state ─── */
+  .empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-text { font-size: 14px; }
+
+  /* ─── Scrollbar ─── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ─── Confirm delete modal ─── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 28px;
+    max-width: 360px; width: 90%;
+    text-align: center;
+  }
+  .modal h3 { font-size: 16px; margin-bottom: 10px; }
+  .modal p { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .modal-btns { display: flex; gap: 10px; justify-content: center; }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 60px; }
+    .logo-mark { display: none; } .logo-sub { display: none; }
+    .nav-item span { display: none; }
+    .main { margin-left: 60px; padding: 20px 18px; }
+    .metrics { grid-template-columns: 1fr 1fr; }
+    .form-grid, .form-grid-wide { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">SubsGH</div>
+      <div class="logo-sub">Subscription Manager</div>
+    </div>
+    <nav>
+      <div class="nav-item active" onclick="showPanel('dashboard', this)">
+        <span class="nav-icon">📊</span><span>Dashboard</span>
+      </div>
+      <div class="nav-item" onclick="showPanel('log', this)">
+        <span class="nav-icon">➕</span><span>Log Sale</span>
+      </div>
+      <div class="nav-item" onclick="showPanel('history', this)">
+        <span class="nav-icon">📋</span><span>History</span>
+      </div>
+      <div class="nav-item" onclick="showPanel('catalog', this)">
+        <span class="nav-icon">📦</span><span>Catalog</span>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ─── DASHBOARD ─── -->
+    <div id="panel-dashboard" class="panel active">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-sub">Your subscription business at a glance</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <label style="font-size:12px;color:var(--muted)">Filter:</label>
+          <select id="filterMonth" onchange="renderDashboard()" style="width:160px">
+            <option value="all">All time</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="metrics" id="metricCards"></div>
+
+      <div class="split-section">
+        <div class="split-title">Revenue breakdown</div>
+        <div class="split-bar" id="splitBar">
+          <div class="split-bar-seg" style="background:var(--gold);width:0%"></div>
+          <div class="split-bar-seg" style="background:var(--green);width:0%"></div>
+          <div class="split-bar-seg" style="background:var(--blue);width:0%"></div>
+          <div class="split-bar-seg" style="background:var(--purple);width:0%"></div>
+        </div>
+        <div class="split-legend">
+          <div class="split-leg"><div class="split-dot" style="background:var(--gold)"></div><div class="split-leg-label">Your profit (50%)</div><span class="split-leg-val text-gold" id="legProfit">GH₵0</span></div>
+          <div class="split-leg"><div class="split-dot" style="background:var(--green)"></div><div class="split-leg-label">Cost pool (20%)</div><span class="split-leg-val text-green" id="legCost">GH₵0</span></div>
+          <div class="split-leg"><div class="split-dot" style="background:var(--blue)"></div><div class="split-leg-label">Investment (5%)</div><span class="split-leg-val text-blue" id="legInvest">GH₵0</span></div>
+          <div class="split-leg"><div class="split-dot" style="background:var(--purple)"></div><div class="split-leg-label">Base cost (25%)</div><span class="split-leg-val text-purple" id="legBase">GH₵0</span></div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">Recent sales</div>
+          <div class="table-count" id="recentCount">0 entries</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Plan</th>
+              <th>Collected</th>
+              <th>Your take (50%)</th>
+              <th>Cost (20%)</th>
+              <th>Investment (5%)</th>
+            </tr>
+          </thead>
+          <tbody id="dashTable"><tr><td colspan="7"><div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No sales logged yet</div></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── LOG SALE ─── -->
+    <div id="panel-log" class="panel">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Log a sale</div>
+          <div class="page-sub">Record a new subscription purchase</div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <div class="form-title">Sale details</div>
+        <div class="form-grid" style="margin-bottom:14px">
+          <div class="field">
+            <label>Customer name</label>
+            <input type="text" id="custName" placeholder="e.g. Ama Asante">
+          </div>
+          <div class="field">
+            <label>Phone / MoMo</label>
+            <input type="text" id="custPhone" placeholder="0244000000">
+          </div>
+          <div class="field">
+            <label>Date of sale</label>
+            <input type="date" id="saleDate">
+          </div>
+        </div>
+        <div class="form-grid-wide" style="margin-bottom:14px">
+          <div class="field">
+            <label>Subscription plan</label>
+            <select id="planSelect" onchange="updatePreview()">
+              <option value="">— Select a plan —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Base price (GH₵)</label>
+            <div class="price-preview" id="previewBase">—</div>
+          </div>
+          <div class="field">
+            <label>You collect (GH₵)</label>
+            <div class="price-preview" id="previewSell" style="color:var(--gold)">—</div>
+          </div>
+          <div class="field">
+            <label>Your profit (GH₵)</label>
+            <div class="price-preview" id="previewProfit" style="color:var(--green)">—</div>
+          </div>
+        </div>
+        <div style="margin-bottom:14px">
+          <div class="field">
+            <label>Notes (optional)</label>
+            <input type="text" id="saleNotes" placeholder="e.g. Paid via MoMo, renewal: 7 Jun">
+          </div>
+        </div>
+
+        <!-- Breakdown preview -->
+        <div id="breakdownPreview" style="display:none;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:18px">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Price breakdown</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+            <div style="text-align:center">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Your profit</div>
+              <div class="mono text-gold" style="font-size:18px;font-weight:600" id="bdProfit">—</div>
+              <div style="font-size:10px;color:var(--dim);margin-top:2px">50% of base</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Cost pool</div>
+              <div class="mono text-green" style="font-size:18px;font-weight:600" id="bdCost">—</div>
+              <div style="font-size:10px;color:var(--dim);margin-top:2px">20% of base</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Investment</div>
+              <div class="mono text-blue" style="font-size:18px;font-weight:600" id="bdInvest">—</div>
+              <div style="font-size:10px;color:var(--dim);margin-top:2px">5% of base</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Base cost</div>
+              <div class="mono text-purple" style="font-size:18px;font-weight:600" id="bdBase">—</div>
+              <div style="font-size:10px;color:var(--dim);margin-top:2px">subscription cost</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="logSale()">✓ Log this sale</button>
+      </div>
+    </div>
+
+    <!-- ─── HISTORY ─── -->
+    <div id="panel-history" class="panel">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Sales history</div>
+          <div class="page-sub">All logged subscriptions</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <input type="text" id="searchInput" placeholder="Search customer or plan…" style="width:200px" oninput="renderHistory()">
+          <select id="filterService" onchange="renderHistory()" style="width:150px">
+            <option value="">All services</option>
+            <option value="Snapchat+">Snapchat+</option>
+            <option value="Spotify">Spotify</option>
+            <option value="Netflix">Netflix</option>
+            <option value="ChatGPT">ChatGPT</option>
+            <option value="CapCut">CapCut</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">All entries</div>
+          <button class="btn btn-danger btn-sm" onclick="clearAllConfirm()">Clear all</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Plan</th>
+              <th>Collected</th>
+              <th>Profit (50%)</th>
+              <th>Cost (20%)</th>
+              <th>Invest (5%)</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="historyTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── CATALOG ─── -->
+    <div id="panel-catalog" class="panel">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Price catalog</div>
+          <div class="page-sub">Base prices + your selling prices (base × 1.75)</div>
+        </div>
+      </div>
+      <div class="catalog-grid" id="catalogGrid"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Delete modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>Delete this entry?</h3>
+    <p>This cannot be undone.</p>
+    <div class="modal-btns">
+      <button class="btn" style="background:var(--bg3);color:var(--text);border:1px solid var(--border)" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="clearModal">
+  <div class="modal">
+    <h3>Clear all entries?</h3>
+    <p>This will permanently delete all logged sales. This cannot be undone.</p>
+    <div class="modal-btns">
+      <button class="btn" style="background:var(--bg3);color:var(--text);border:1px solid var(--border)" onclick="closeClearModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmClear()">Yes, clear all</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const PLANS = [
+  // Snapchat+
+  { id:'snap_mo',   service:'Snapchat+', name:'Monthly',         base:44.69,  badge:'badge-snap'    },
+  { id:'snap_ann',  service:'Snapchat+', name:'Annual (total)',  base:335.89, badge:'badge-snap'    },
+
+  // Spotify
+  { id:'spot_stu',  service:'Spotify',   name:'Student',         base:12,     badge:'badge-spotify' },
+  { id:'spot_ind',  service:'Spotify',   name:'Individual',      base:24,     badge:'badge-spotify' },
+  { id:'spot_duo',  service:'Spotify',   name:'Duo',             base:33,     badge:'badge-spotify' },
+  { id:'spot_fam',  service:'Spotify',   name:'Family (6 acc.)', base:43,     badge:'badge-spotify' },
+
+  // Netflix
+  { id:'nf_mob',    service:'Netflix',   name:'Mobile (480p)',   base:33.49,  badge:'badge-netflix' },
+  { id:'nf_bas',    service:'Netflix',   name:'Basic (720p)',     base:44.69,  badge:'badge-netflix' },
+  { id:'nf_std',    service:'Netflix',   name:'Standard (1080p)',base:89.49,  badge:'badge-netflix' },
+  { id:'nf_pre',    service:'Netflix',   name:'Premium (4K)',     base:111.89, badge:'badge-netflix' },
+
+  // ChatGPT
+  { id:'gpt_go',    service:'ChatGPT',   name:'Go ($8)',          base:89.60,  badge:'badge-chatgpt' },
+  { id:'gpt_plus',  service:'ChatGPT',   name:'Plus ($20)',       base:224.00, badge:'badge-chatgpt' },
+  { id:'gpt_pro1',  service:'ChatGPT',   name:'Pro $100',         base:1120.00,badge:'badge-chatgpt' },
+  { id:'gpt_pro2',  service:'ChatGPT',   name:'Pro $200',         base:2240.00,badge:'badge-chatgpt' },
+
+  // CapCut
+  { id:'cap_std',   service:'CapCut',    name:'Standard (mobile)',base:111.89, badge:'badge-capcut'  },
+  { id:'cap_pro',   service:'CapCut',    name:'Pro Monthly',      base:223.89, badge:'badge-capcut'  },
+  { id:'cap_ann',   service:'CapCut',    name:'Pro Annual (total)',base:2015.89,badge:'badge-capcut'  },
+];
+
+// Pricing formula: sell = base * 1.75 (base + 50% + 20% + 5%)
+function sell(base)   { return base * 1.75; }
+function profit(base) { return base * 0.50; }
+function cost(base)   { return base * 0.20; }
+function invest(base) { return base * 0.05; }
+
+function gh(n) { return 'GH₵' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+function ghR(n) { return 'GH₵' + Math.round(n).toLocaleString(); }
+
+// ─── STORAGE ─────────────────────────────────────────────────────────────────
+let sales = [];
+function loadSales() {
+  try { sales = JSON.parse(localStorage.getItem('subsgh_sales') || '[]'); } catch(e) { sales = []; }
+}
+function saveSales() {
+  localStorage.setItem('subsgh_sales', JSON.stringify(sales));
+}
+loadSales();
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+function showPanel(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  el.classList.add('active');
+  if(name === 'dashboard') renderDashboard();
+  if(name === 'history')   renderHistory();
+  if(name === 'catalog')   renderCatalog();
+  if(name === 'log')       initLog();
+}
+
+// ─── LOG SALE ────────────────────────────────────────────────────────────────
+function initLog() {
+  const sel = document.getElementById('planSelect');
+  sel.innerHTML = '<option value="">— Select a plan —</option>';
+  PLANS.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.service + ' · ' + p.name + ' → ' + gh(sell(p.base));
+    sel.appendChild(opt);
+  });
+  // Set today's date
+  if(!document.getElementById('saleDate').value) {
+    document.getElementById('saleDate').value = new Date().toISOString().slice(0,10);
+  }
+  updatePreview();
+}
+
+function updatePreview() {
+  const id = document.getElementById('planSelect').value;
+  const plan = PLANS.find(p => p.id === id);
+  if(!plan) {
+    document.getElementById('previewBase').textContent = '—';
+    document.getElementById('previewSell').textContent = '—';
+    document.getElementById('previewProfit').textContent = '—';
+    document.getElementById('breakdownPreview').style.display = 'none';
+    return;
+  }
+  document.getElementById('previewBase').textContent = gh(plan.base);
+  document.getElementById('previewSell').textContent = gh(sell(plan.base));
+  document.getElementById('previewProfit').textContent = gh(profit(plan.base));
+  document.getElementById('bdProfit').textContent = gh(profit(plan.base));
+  document.getElementById('bdCost').textContent = gh(cost(plan.base));
+  document.getElementById('bdInvest').textContent = gh(invest(plan.base));
+  document.getElementById('bdBase').textContent = gh(plan.base);
+  document.getElementById('breakdownPreview').style.display = 'block';
+}
+
+function logSale() {
+  const custName = document.getElementById('custName').value.trim();
+  const custPhone = document.getElementById('custPhone').value.trim();
+  const planId = document.getElementById('planSelect').value;
+  const date = document.getElementById('saleDate').value;
+  const notes = document.getElementById('saleNotes').value.trim();
+
+  if(!custName) { alert('Please enter customer name.'); return; }
+  if(!planId) { alert('Please select a plan.'); return; }
+  if(!date) { alert('Please select a date.'); return; }
+
+  const plan = PLANS.find(p => p.id === planId);
+  sales.unshift({
+    id: Date.now(),
+    date, custName, custPhone,
+    planId, service: plan.service, planName: plan.name,
+    base: plan.base, notes, badge: plan.badge
+  });
+  saveSales();
+
+  // Reset form
+  document.getElementById('custName').value = '';
+  document.getElementById('custPhone').value = '';
+  document.getElementById('saleNotes').value = '';
+  document.getElementById('planSelect').value = '';
+  updatePreview();
+
+  alert('✓ Sale logged successfully!');
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────────────────────
+function buildMonthOptions() {
+  const sel = document.getElementById('filterMonth');
+  const months = new Set(sales.map(s => s.date.slice(0,7)));
+  sel.innerHTML = '<option value="all">All time</option>';
+  [...months].sort().reverse().forEach(m => {
+    const [y,mo] = m.split('-');
+    const label = new Date(y, mo-1).toLocaleString('default',{month:'long',year:'numeric'});
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = label;
+    sel.appendChild(opt);
+  });
+}
+
+function renderDashboard() {
+  buildMonthOptions();
+  const filter = document.getElementById('filterMonth').value;
+  const filtered = filter === 'all' ? sales : sales.filter(s => s.date.slice(0,7) === filter);
+
+  const totBase    = filtered.reduce((a,s) => a + s.base, 0);
+  const totSell    = filtered.reduce((a,s) => a + sell(s.base), 0);
+  const totProfit  = filtered.reduce((a,s) => a + profit(s.base), 0);
+  const totCost    = filtered.reduce((a,s) => a + cost(s.base), 0);
+  const totInvest  = filtered.reduce((a,s) => a + invest(s.base), 0);
+
+  // Metric cards
+  document.getElementById('metricCards').innerHTML = `
+    <div class="metric gold">
+      <div class="metric-icon">💰</div>
+      <div class="metric-label">Total collected</div>
+      <div class="metric-value">${ghR(totSell)}</div>
+      <div class="metric-sub">${filtered.length} sale${filtered.length!==1?'s':''}</div>
+    </div>
+    <div class="metric green">
+      <div class="metric-icon">📈</div>
+      <div class="metric-label">Your profit (50%)</div>
+      <div class="metric-value">${ghR(totProfit)}</div>
+      <div class="metric-sub">what you keep</div>
+    </div>
+    <div class="metric blue">
+      <div class="metric-icon">⚙️</div>
+      <div class="metric-label">Cost pool (20%)</div>
+      <div class="metric-value">${ghR(totCost)}</div>
+      <div class="metric-sub">operations</div>
+    </div>
+    <div class="metric purple">
+      <div class="metric-icon">🏦</div>
+      <div class="metric-label">Investment (5%)</div>
+      <div class="metric-value">${ghR(totInvest)}</div>
+      <div class="metric-sub">reinvested</div>
+    </div>
+  `;
+
+  // Split bar
+  if(totSell > 0) {
+    const segs = document.querySelectorAll('.split-bar-seg');
+    segs[0].style.width = (totProfit/totSell*100).toFixed(1)+'%';
+    segs[1].style.width = (totCost/totSell*100).toFixed(1)+'%';
+    segs[2].style.width = (totInvest/totSell*100).toFixed(1)+'%';
+    segs[3].style.width = (totBase/totSell*100).toFixed(1)+'%';
+  }
+  document.getElementById('legProfit').textContent = gh(totProfit);
+  document.getElementById('legCost').textContent = gh(totCost);
+  document.getElementById('legInvest').textContent = gh(totInvest);
+  document.getElementById('legBase').textContent = gh(totBase);
+
+  // Recent table
+  document.getElementById('recentCount').textContent = filtered.length + ' entr' + (filtered.length===1?'y':'ies');
+  const tbody = document.getElementById('dashTable');
+  if(filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No sales in this period</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.slice(0,20).map(s => `
+    <tr>
+      <td class="text-muted mono" style="font-size:12px">${s.date}</td>
+      <td><div style="font-weight:500">${s.custName}</div>${s.custPhone?`<div style="font-size:11px;color:var(--muted)">${s.custPhone}</div>`:''}</td>
+      <td><span class="badge ${s.badge}">${s.service}</span><div style="font-size:12px;color:var(--muted);margin-top:3px">${s.planName}</div></td>
+      <td class="mono text-gold" style="font-weight:600">${gh(sell(s.base))}</td>
+      <td class="mono text-green">${gh(profit(s.base))}</td>
+      <td class="mono text-blue" style="font-size:12px">${gh(cost(s.base))}</td>
+      <td class="mono text-purple" style="font-size:12px">${gh(invest(s.base))}</td>
+    </tr>
+  `).join('');
+}
+
+// ─── HISTORY ─────────────────────────────────────────────────────────────────
+function renderHistory() {
+  const search = (document.getElementById('searchInput').value||'').toLowerCase();
+  const svc    = document.getElementById('filterService').value;
+  let filtered = sales.filter(s => {
+    const matchSearch = !search || s.custName.toLowerCase().includes(search) || s.planName.toLowerCase().includes(search) || s.service.toLowerCase().includes(search);
+    const matchSvc = !svc || s.service === svc;
+    return matchSearch && matchSvc;
+  });
+
+  const tbody = document.getElementById('historyTable');
+  if(filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">No matching entries</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(s => `
+    <tr>
+      <td class="mono text-muted" style="font-size:12px">${s.date}</td>
+      <td style="font-weight:500">${s.custName}</td>
+      <td class="text-muted" style="font-size:12px">${s.custPhone||'—'}</td>
+      <td><span class="badge ${s.badge}">${s.service}</span><div style="font-size:11px;color:var(--muted);margin-top:2px">${s.planName}</div></td>
+      <td class="mono text-gold" style="font-weight:600">${gh(sell(s.base))}</td>
+      <td class="mono text-green">${gh(profit(s.base))}</td>
+      <td class="mono text-blue" style="font-size:12px">${gh(cost(s.base))}</td>
+      <td class="mono text-purple" style="font-size:12px">${gh(invest(s.base))}</td>
+      <td class="text-muted" style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="openDeleteModal(${s.id})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+// ─── CATALOG ─────────────────────────────────────────────────────────────────
+const SERVICE_META = {
+  'Snapchat+': { emoji:'👻', desc:'Premium Snapchat features' },
+  'Spotify':   { emoji:'🎵', desc:'Localized GHS pricing' },
+  'Netflix':   { emoji:'🎬', desc:'Ghana-localized USD pricing' },
+  'ChatGPT':   { emoji:'🤖', desc:'OpenAI ChatGPT plans' },
+  'CapCut':    { emoji:'🎞️', desc:'Video editing by ByteDance' },
+};
+
+function renderCatalog() {
+  const services = [...new Set(PLANS.map(p => p.service))];
+  document.getElementById('catalogGrid').innerHTML = services.map(svc => {
+    const plans = PLANS.filter(p => p.service === svc);
+    const meta = SERVICE_META[svc] || { emoji:'📦', desc:'' };
+    return `
+      <div class="service-card">
+        <div class="service-header">
+          <div class="service-emoji">${meta.emoji}</div>
+          <div>
+            <div class="service-name">${svc}</div>
+            <div style="font-size:11px;color:var(--muted)">${meta.desc}</div>
+          </div>
+        </div>
+        <div class="service-body">
+          <div style="display:grid;grid-template-columns:1fr auto auto auto;padding:8px 18px 4px;gap:8px">
+            <div class="plan-label" style="text-align:left">Plan</div>
+            <div class="plan-label">Base</div>
+            <div class="plan-label">You sell</div>
+            <div class="plan-label">Profit</div>
+          </div>
+          ${plans.map(p => `
+            <div class="plan-row">
+              <div class="plan-name">${p.name}</div>
+              <div class="plan-base" style="font-size:11px">${gh(p.base)}</div>
+              <div class="plan-sell">${gh(sell(p.base))}</div>
+              <div class="mono" style="font-size:12px;color:var(--gold)">${gh(profit(p.base))}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ─── DELETE ───────────────────────────────────────────────────────────────────
+let pendingDeleteId = null;
+function openDeleteModal(id) {
+  pendingDeleteId = id;
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeModal() {
+  pendingDeleteId = null;
+  document.getElementById('deleteModal').classList.remove('open');
+}
+function confirmDelete() {
+  sales = sales.filter(s => s.id !== pendingDeleteId);
+  saveSales();
+  closeModal();
+  renderHistory();
+}
+function clearAllConfirm() {
+  document.getElementById('clearModal').classList.add('open');
+}
+function closeClearModal() {
+  document.getElementById('clearModal').classList.remove('open');
+}
+function confirmClear() {
+  sales = [];
+  saveSales();
+  closeClearModal();
+  renderHistory();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+renderDashboard();
+renderCatalog();
+</script>
+</body>
+</html>
